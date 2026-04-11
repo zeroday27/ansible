@@ -1,0 +1,4 @@
+---
+- name: Baseline placeholder task
+  ansible.builtin.debug:
+    msg: "Common role scaffold initialized"

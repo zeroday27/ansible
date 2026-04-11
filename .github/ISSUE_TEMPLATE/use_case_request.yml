@@ -1,0 +1,17 @@
+name: Use case request
+description: Propose a new real-world use case
+title: "[Use Case]: "
+labels: ["use-case", "triage"]
+body:
+  - type: textarea
+    id: context
+    attributes:
+      label: Real-world context
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
