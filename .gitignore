@@ -11,6 +11,10 @@ inventories/staging/host_vars/*
 inventories/staging/group_vars/*
 inventories/dev/host_vars/*
 inventories/dev/group_vars/*
+inventories/prod/*
+inventories/staging/*
+inventories/dev/*
+
 
 # Keep directory structure via .gitkeep
 !inventories/**/host_vars/.gitkeep
