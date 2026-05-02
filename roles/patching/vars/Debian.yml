@@ -1,0 +1,11 @@
+---
+# Debian/Ubuntu family specific variables
+_patch_lock_files:
+  - /var/lib/dpkg/lock-frontend
+  - /var/lib/apt/lists/lock
+
+_patch_reboot_hint_file: /var/run/reboot-required
+
+_patch_cache_clean_cmd: "apt-get clean"
+
+_patch_kernel_pkg_prefix: "linux-image"

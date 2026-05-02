@@ -1,0 +1,35 @@
+---
+# ============================================================================
+# Patching Role - Task Router
+# ============================================================================
+# Dispatches to OS-family-specific task files using conditionals.
+# Supported: Debian (Ubuntu), RedHat (RHEL, AlmaLinux, Amazon Linux, Alibaba Cloud Linux)
+
+- name: Load OS-family variables
+  ansible.builtin.include_vars:
+    file: "{{ ansible_os_family }}.yml"
+
+- name: Fail on unsupported OS family
+  ansible.builtin.fail:
+    msg: >-
+      Unsupported OS family '{{ ansible_os_family }}' on {{ inventory_hostname }}.
+      This role supports Debian and RedHat families only.
+  when: ansible_os_family not in ["Debian", "RedHat"]
+
+- name: Run pre-flight checks
+  ansible.builtin.include_tasks: pre_checks.yml
+
+- name: Apply Debian/Ubuntu patches
+  ansible.builtin.include_tasks: debian.yml
+  when: ansible_os_family == "Debian"
+
+- name: Apply RedHat-family patches
+  ansible.builtin.include_tasks: redhat.yml
+  when: ansible_os_family == "RedHat"
+
+- name: Evaluate kernel update status
+  ansible.builtin.include_tasks: kernel.yml
+  when: patch_kernel_update | bool
+
+- name: Run post-patch checks and reporting
+  ansible.builtin.include_tasks: post_checks.yml

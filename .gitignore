@@ -1,0 +1,78 @@
+# ============================================================================
+# Ansible Project .gitignore
+# ============================================================================
+
+# ------ Environment-Specific Inventory Data ------
+# Host/group vars contain IPs, credentials, and environment-specific secrets.
+# Only scaffold (hosts.yml with empty {} and .gitkeep) should be committed.
+inventories/prod/host_vars/*
+inventories/prod/group_vars/*
+inventories/staging/host_vars/*
+inventories/staging/group_vars/*
+inventories/dev/host_vars/*
+inventories/dev/group_vars/*
+
+# Keep directory structure via .gitkeep
+!inventories/**/host_vars/.gitkeep
+!inventories/**/group_vars/.gitkeep
+
+# ------ Secrets & Credentials ------
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.vault
+*vault*.yml
+!*vault*.yml.example
+*.env
+.env.*
+
+# Ansible vault password files
+.vault_pass
+.vault_pass.txt
+vault_password_file
+
+# ------ Ansible Runtime Artifacts ------
+*.retry
+*.log
+*.cache
+
+# ------ Python / Virtualenv ------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# ------ OS / Editor ------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+
+# ------ AI Coding Assistants ------
+.claude/
+.gemini/
+.cursor/
+.copilot/
+.github/copilot/
+.windsurf/
+.warp/
+.codeium/
+.aider*
+.continue/
+.tabby/
+.cody/
+
+# ------ Collections & Roles (downloaded, not committed) ------
+collections/ansible_collections/
+roles/requirements/
+
+# ------ Molecule (test artifacts) ------
+molecule/**/molecule.yml.bak
+molecule/**/__pycache__/

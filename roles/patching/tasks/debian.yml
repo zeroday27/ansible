@@ -1,0 +1,68 @@
+---
+# ============================================================================
+# Debian / Ubuntu Patching
+# ============================================================================
+# Handles both full and security-only update modes via apt.
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+# ---------------------------------------------------------------------------
+# Security-only mode
+# ---------------------------------------------------------------------------
+- name: "Security-only | Ensure unattended-upgrades is installed"
+  ansible.builtin.apt:
+    name: unattended-upgrades
+    state: present
+  when: patch_mode == "security"
+
+- name: "Security-only | Apply security patches"
+  ansible.builtin.command:
+    cmd: >-
+      unattended-upgrade
+      --dry-run
+      -d 2>&1 | head -0 && unattended-upgrade -v
+  register: _deb_security_result
+  changed_when: "'Packages that will be upgraded' in _deb_security_result.stdout"
+  when: patch_mode == "security"
+
+# ---------------------------------------------------------------------------
+# Full update mode
+# ---------------------------------------------------------------------------
+- name: "Full update | Hold excluded packages"
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop: "{{ patch_exclude_packages }}"
+  when:
+    - patch_mode == "full"
+    - patch_exclude_packages | length > 0
+
+- name: "Full update | Upgrade all packages (dist-upgrade)"
+  ansible.builtin.apt:
+    upgrade: dist
+    autoremove: true
+    autoclean: true
+  register: _deb_full_result
+  when: patch_mode == "full"
+
+- name: "Full update | Unhold excluded packages"
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: install
+  loop: "{{ patch_exclude_packages }}"
+  when:
+    - patch_mode == "full"
+    - patch_exclude_packages | length > 0
+
+# ---------------------------------------------------------------------------
+# Result consolidation
+# ---------------------------------------------------------------------------
+- name: Set Debian patch results fact
+  ansible.builtin.set_fact:
+    _patch_result: "{{ _deb_full_result if patch_mode == 'full' else _deb_security_result }}"
+    _patch_changed: >-
+      {{ (_deb_full_result.changed | default(false)) if patch_mode == 'full'
+         else (_deb_security_result.changed | default(false)) }}

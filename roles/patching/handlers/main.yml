@@ -1,0 +1,13 @@
+---
+# ============================================================================
+# Patching Role - Handlers
+# ============================================================================
+# Reboot handler — called only when explicitly triggered by tasks.
+# Default policy is "never", so this should not fire during normal patching.
+
+- name: Reboot host
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ patch_reboot_timeout }}"
+    msg: "Ansible patching role - reboot triggered by handler"
+  listen: reboot host
+  when: patch_reboot_policy != "never"

@@ -1,0 +1,42 @@
+---
+# ============================================================================
+# Linux Patching Playbook
+# ============================================================================
+# Applies package and kernel updates across all supported Linux distributions.
+# Reboot is OFF by default — use playbooks/patch_reboot.yml for manual reboots.
+#
+# Supported OS:
+#   - Ubuntu / Debian           (apt)
+#   - AlmaLinux / RHEL          (dnf)
+#   - Amazon Linux 2/2023       (yum/dnf)
+#   - Alibaba Cloud Linux 2/3   (yum/dnf)
+#
+# Usage:
+#   Full update (all packages):
+#     ansible-playbook playbooks/patch.yml -i inventories/prod/hosts.yml
+#
+#   Security patches only:
+#     ansible-playbook playbooks/patch.yml -i inventories/prod/hosts.yml -e patch_mode=security
+#
+#   Skip kernel updates:
+#     ansible-playbook playbooks/patch.yml -i inventories/prod/hosts.yml -e patch_kernel_update=false
+#
+#   Exclude specific packages:
+#     ansible-playbook playbooks/patch.yml -i inventories/prod/hosts.yml \
+#       -e '{"patch_exclude_packages":["nginx","httpd"]}'
+#
+#   Target specific hosts:
+#     ansible-playbook playbooks/patch.yml -i inventories/prod/hosts.yml --limit web01
+#
+#   Dry run (check mode):
+#     ansible-playbook playbooks/patch.yml -i inventories/prod/hosts.yml --check --diff
+# ============================================================================
+
+- name: Linux patching
+  hosts: all
+  become: true
+  serial: "25%"
+  gather_facts: true
+
+  roles:
+    - role: patching

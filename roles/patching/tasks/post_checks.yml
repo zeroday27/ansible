@@ -1,0 +1,74 @@
+---
+# ============================================================================
+# Post-Patch Checks & Reporting
+# ============================================================================
+
+# --- Debian reboot detection ---
+- name: "Debian | Check reboot-required flag"
+  ansible.builtin.stat:
+    path: "{{ _patch_reboot_hint_file }}"
+  register: _deb_reboot_flag
+  when:
+    - ansible_os_family == "Debian"
+    - _patch_reboot_hint_file | length > 0
+
+# --- RedHat reboot detection ---
+- name: "RedHat | Check needs-restarting"
+  ansible.builtin.command:
+    cmd: "{{ _patch_needs_restarting_cmd }}"
+  register: _rh_needs_restart
+  changed_when: false
+  failed_when: false
+  when: ansible_os_family == "RedHat"
+
+# --- Unified reboot-needed fact ---
+- name: Determine if reboot is needed
+  ansible.builtin.set_fact:
+    _patch_reboot_needed: >-
+      {{ (ansible_os_family == 'Debian' and
+          (_deb_reboot_flag.stat.exists | default(false)))
+         or
+         (ansible_os_family == 'RedHat' and
+          (_rh_needs_restart.rc | default(0)) == 1)
+         or
+         (_patch_kernel_reboot_needed | default(false) | bool) }}
+
+# --- Generate report ---
+- name: Record patching end time
+  ansible.builtin.set_fact:
+    _patch_end_time: "{{ ansible_date_time.iso8601 }}"
+
+- name: Write patching report
+  ansible.builtin.template:
+    src: patching_report.j2
+    dest: "{{ patch_report_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+
+# --- Summary output ---
+- name: Display patching summary
+  ansible.builtin.debug:
+    msg: |
+      ═══════════════════════════════════════════════════════════
+       PATCH SUMMARY: {{ inventory_hostname }}
+      ═══════════════════════════════════════════════════════════
+       OS ............ {{ ansible_distribution }} {{ ansible_distribution_version }}
+       Mode .......... {{ patch_mode }}
+       Changed ....... {{ _patch_changed | trim }}
+       Kernel Before . {{ _patch_kernel_before }}
+       Kernel After .. {{ _patch_kernel_after | default(_patch_kernel_before) | trim }}
+       Reboot Needed . {{ _patch_reboot_needed | trim }}
+       Reboot Policy . {{ patch_reboot_policy }}
+       Report ........ {{ patch_report_path }}
+      ═══════════════════════════════════════════════════════════
+
+# --- Conditional reboot (only when policy is NOT "never") ---
+- name: Reboot if policy permits
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ patch_reboot_timeout }}"
+    msg: "Ansible patching role - rebooting for pending updates"
+  when:
+    - patch_reboot_policy != "never"
+    - _patch_reboot_needed | trim | bool
+    - patch_reboot_policy == "always" or _patch_reboot_needed | trim | bool

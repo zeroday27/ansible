@@ -1,0 +1,63 @@
+---
+# ============================================================================
+# Kernel Update Evaluation
+# ============================================================================
+# Compares running kernel vs latest installed kernel to determine if a
+# reboot will be needed. Does NOT reboot — that is handled separately.
+
+- name: Get running kernel version
+  ansible.builtin.command:
+    cmd: uname -r
+  register: _kernel_running
+  changed_when: false
+  check_mode: false
+
+# --- Debian-family kernel check ---
+- name: "Debian | Get latest installed kernel"
+  ansible.builtin.shell: |
+    set -o pipefail
+    dpkg -l 'linux-image-[0-9]*' 2>/dev/null \
+      | awk '/^ii/{print $2}' \
+      | sort -V \
+      | tail -1 \
+      | sed 's/linux-image-//'
+  args:
+    executable: /bin/bash
+  register: _deb_kernel_installed
+  changed_when: false
+  check_mode: false
+  when: ansible_os_family == "Debian"
+
+# --- RedHat-family kernel check ---
+- name: "RedHat | Get latest installed kernel"
+  ansible.builtin.shell: |
+    set -o pipefail
+    rpm -q kernel --queryformat '%{VERSION}-%{RELEASE}.%{ARCH}\n' 2>/dev/null \
+      | sort -V \
+      | tail -1
+  args:
+    executable: /bin/bash
+  register: _rh_kernel_installed
+  changed_when: false
+  check_mode: false
+  when: ansible_os_family == "RedHat"
+
+# --- Unified comparison ---
+- name: Set kernel comparison facts
+  ansible.builtin.set_fact:
+    _patch_kernel_after: >-
+      {{ (_deb_kernel_installed.stdout | default(''))
+         if ansible_os_family == 'Debian'
+         else (_rh_kernel_installed.stdout | default('')) }}
+    _patch_kernel_reboot_needed: >-
+      {{ _kernel_running.stdout != (
+           _deb_kernel_installed.stdout if ansible_os_family == 'Debian'
+           else _rh_kernel_installed.stdout
+         ) }}
+
+- name: Display kernel status
+  ansible.builtin.debug:
+    msg: >-
+      Kernel: running={{ _kernel_running.stdout }},
+      installed={{ _patch_kernel_after | trim }},
+      reboot_needed={{ _patch_kernel_reboot_needed | trim }}

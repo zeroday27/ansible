@@ -1,0 +1,48 @@
+---
+# ============================================================================
+# RedHat Family Patching (RHEL, AlmaLinux, Amazon Linux, Alibaba Cloud Linux)
+# ============================================================================
+# Uses ansible.builtin.dnf which auto-falls back to yum when dnf is unavailable.
+# This single task file handles all RedHat-family distros.
+
+# ---------------------------------------------------------------------------
+# Security-only mode
+# ---------------------------------------------------------------------------
+- name: "Security-only | Apply security updates"
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest  # noqa: package-latest
+    security: true
+    exclude: "{{ patch_exclude_packages | join(',') if patch_exclude_packages | length > 0 else omit }}"
+  register: _rh_security_result
+  when: patch_mode == "security"
+
+# ---------------------------------------------------------------------------
+# Full update mode
+# ---------------------------------------------------------------------------
+- name: "Full update | Apply all available updates"
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest  # noqa: package-latest
+    exclude: "{{ patch_exclude_packages | join(',') if patch_exclude_packages | length > 0 else omit }}"
+  register: _rh_full_result
+  when: patch_mode == "full"
+
+# ---------------------------------------------------------------------------
+# Cache cleanup
+# ---------------------------------------------------------------------------
+- name: Clean package manager cache
+  ansible.builtin.command:
+    cmd: "{{ _patch_cache_clean_cmd }}"
+  changed_when: false
+  when: patch_auto_clean_cache | bool
+
+# ---------------------------------------------------------------------------
+# Result consolidation
+# ---------------------------------------------------------------------------
+- name: Set RedHat patch results fact
+  ansible.builtin.set_fact:
+    _patch_result: "{{ _rh_full_result if patch_mode == 'full' else _rh_security_result }}"
+    _patch_changed: >-
+      {{ (_rh_full_result.changed | default(false)) if patch_mode == 'full'
+         else (_rh_security_result.changed | default(false)) }}

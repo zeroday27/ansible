@@ -1,0 +1,24 @@
+---
+galaxy_info:
+  role_name: patching
+  author: zeroday27
+  description: >-
+    Multi-distro Linux patching role supporting Ubuntu, Debian, AlmaLinux,
+    RHEL, Amazon Linux, and Alibaba Cloud Linux. Handles full updates,
+    security-only patches, and kernel upgrade detection.
+  license: MIT
+  min_ansible_version: "2.14"
+  platforms:
+    - name: Ubuntu
+      versions: [focal, jammy, noble]
+    - name: Debian
+      versions: [bullseye, bookworm]
+    - name: EL
+      versions: [8, 9]
+  galaxy_tags:
+    - patching
+    - security
+    - linux
+    - kernel
+    - update
+dependencies: []

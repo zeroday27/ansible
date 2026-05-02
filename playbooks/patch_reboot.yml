@@ -1,0 +1,106 @@
+---
+# ============================================================================
+# Post-Patch Reboot Playbook (Manual, Targeted)
+# ============================================================================
+# Run this AFTER patch.yml to reboot hosts that require it.
+# Always use --limit to target specific hosts.
+#
+# Usage:
+#   Reboot specific hosts:
+#     ansible-playbook playbooks/patch_reboot.yml -i inventories/prod/hosts.yml \
+#       --limit web01,web02
+#
+#   Reboot a host group:
+#     ansible-playbook playbooks/patch_reboot.yml -i inventories/prod/hosts.yml \
+#       --limit 'webservers'
+#
+#   Custom timeout (seconds):
+#     ansible-playbook playbooks/patch_reboot.yml -i inventories/prod/hosts.yml \
+#       --limit db01 -e patch_reboot_timeout=900
+#
+#   Dry run:
+#     ansible-playbook playbooks/patch_reboot.yml -i inventories/prod/hosts.yml \
+#       --limit web01 --check
+# ============================================================================
+
+- name: Post-patch reboot (manual)
+  hosts: all
+  become: true
+  serial: 1  # One host at a time for safety
+  gather_facts: true
+
+  vars:
+    patch_reboot_timeout: 600
+
+  tasks:
+    # --- Safety check: warn if no --limit was used ---
+    - name: Warn if running against all hosts
+      ansible.builtin.pause:
+        prompt: >-
+          ⚠️  WARNING: No --limit flag detected. This will reboot ALL hosts.
+          Press ENTER to continue, or Ctrl+C to abort.
+      when: ansible_limit is not defined
+
+    # --- Record pre-reboot kernel ---
+    - name: Record current kernel
+      ansible.builtin.command:
+        cmd: uname -r
+      register: _kernel_before
+      changed_when: false
+
+    # --- Check if reboot is actually needed ---
+    - name: "Debian | Check reboot-required flag"
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: _reboot_flag_deb
+      when: ansible_os_family == "Debian"
+
+    - name: "RedHat | Check needs-restarting"
+      ansible.builtin.command:
+        cmd: needs-restarting -r
+      register: _reboot_flag_rh
+      changed_when: false
+      failed_when: false
+      when: ansible_os_family == "RedHat"
+
+    - name: Evaluate reboot necessity
+      ansible.builtin.set_fact:
+        _needs_reboot: >-
+          {{ (ansible_os_family == 'Debian' and
+              (_reboot_flag_deb.stat.exists | default(false)))
+             or
+             (ansible_os_family == 'RedHat' and
+              (_reboot_flag_rh.rc | default(0)) == 1) }}
+
+    - name: Display reboot decision
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: reboot_needed={{ _needs_reboot | trim }},
+          kernel={{ _kernel_before.stdout }}
+
+    # --- Reboot ---
+    - name: Reboot host
+      ansible.builtin.reboot:
+        reboot_timeout: "{{ patch_reboot_timeout }}"
+        msg: "Ansible post-patch reboot initiated by operator"
+      when: _needs_reboot | trim | bool
+
+    - name: Skip reboot (not needed)
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: No reboot required — skipping."
+      when: not (_needs_reboot | trim | bool)
+
+    # --- Post-reboot verification ---
+    - name: Record post-reboot kernel
+      ansible.builtin.command:
+        cmd: uname -r
+      register: _kernel_after
+      changed_when: false
+      when: _needs_reboot | trim | bool
+
+    - name: Display kernel transition
+      ansible.builtin.debug:
+        msg: >-
+          {{ inventory_hostname }}: kernel {{ _kernel_before.stdout }}
+          → {{ _kernel_after.stdout | default(_kernel_before.stdout) }}
+      when: _needs_reboot | trim | bool

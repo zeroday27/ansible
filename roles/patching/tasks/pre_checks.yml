@@ -1,0 +1,48 @@
+---
+# ============================================================================
+# Pre-flight Checks
+# ============================================================================
+# Validates system readiness before applying any patches.
+
+- name: Record patching start time
+  ansible.builtin.set_fact:
+    _patch_start_time: "{{ ansible_date_time.iso8601 }}"
+
+- name: Record current running kernel
+  ansible.builtin.set_fact:
+    _patch_kernel_before: "{{ ansible_kernel }}"
+
+- name: Check free disk space on /
+  ansible.builtin.shell: |
+    set -o pipefail
+    df --output=avail -BM / | tail -1 | tr -d ' M'
+  args:
+    executable: /bin/bash
+  register: _disk_free_mb
+  changed_when: false
+  check_mode: false
+
+- name: Assert minimum disk space available
+  ansible.builtin.assert:
+    that:
+      - _disk_free_mb.stdout | int >= patch_pre_check_disk_min_mb
+    fail_msg: >-
+      Insufficient disk space on {{ inventory_hostname }}.
+      Available: {{ _disk_free_mb.stdout }}MB, Required: {{ patch_pre_check_disk_min_mb }}MB.
+    quiet: true
+
+- name: Check for stale package manager lock files
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop: "{{ _patch_lock_files }}"
+  register: _lock_check
+
+- name: Warn if lock files are actively held
+  ansible.builtin.fail:
+    msg: >-
+      Package manager lock file is actively held: {{ item.item }}.
+      Another package manager process may be running on {{ inventory_hostname }}.
+  when: item.stat.exists and item.stat.size | default(0) | int > 0
+  loop: "{{ _lock_check.results }}"
+  loop_control:
+    label: "{{ item.item }}"

@@ -1,0 +1,30 @@
+---
+# ============================================================================
+# Patching Role - Default Variables
+# ============================================================================
+# Override via -e flags, group_vars, or host_vars as needed.
+
+# Patch mode: "full" = all available updates, "security" = security patches only
+patch_mode: "full"
+
+# Reboot policy: "never" (default) | "when_required" | "always"
+# Recommended: leave as "never" and use playbooks/patch_reboot.yml manually.
+patch_reboot_policy: "never"
+
+# Seconds to wait for host to return after reboot (used by patch_reboot.yml)
+patch_reboot_timeout: 600
+
+# Packages to exclude from updates (list of package names)
+patch_exclude_packages: []
+
+# Whether to include kernel packages in the update
+patch_kernel_update: true
+
+# Minimum free disk space (MB) on / before proceeding
+patch_pre_check_disk_min_mb: 500
+
+# Clean package manager cache after patching
+patch_auto_clean_cache: true
+
+# Path for the per-host patching report log
+patch_report_path: "/var/log/ansible_patch_report.log"

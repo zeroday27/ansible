@@ -1,0 +1,12 @@
+---
+# RedHat family specific variables (RHEL, AlmaLinux, Amazon Linux, Alibaba Cloud Linux)
+_patch_lock_files:
+  - /var/run/yum.pid
+
+_patch_reboot_hint_file: ""
+
+_patch_needs_restarting_cmd: "needs-restarting -r"
+
+_patch_cache_clean_cmd: "{{ 'dnf clean all' if ansible_pkg_mgr == 'dnf' else 'yum clean all' }}"
+
+_patch_kernel_pkg_prefix: "kernel"
