@@ -13,8 +13,8 @@ galaxy_info:
       versions: [focal, jammy, noble]
     - name: Debian
       versions: [bullseye, bookworm]
-    - name: EL
-      versions: [8, 9]
+    - name: Enterprise Linux
+      versions: ["8", "9"]
   galaxy_tags:
     - patching
     - security
