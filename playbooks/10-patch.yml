@@ -35,7 +35,7 @@
 - name: Linux patching
   hosts: all
   become: true
-  serial: "25%"
+  serial: 10
   gather_facts: true
 
   roles:
