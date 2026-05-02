@@ -1,0 +1,31 @@
+---
+# Example Ansible Inventory File
+# Copy this file to inventories/dev/hosts.yml, inventories/staging/hosts.yml, 
+# or inventories/prod/hosts.yml and replace the dummy values with your actual servers.
+# 
+# Note: Real inventory files inside those directories are ignored by Git 
+# to prevent accidental leakage of sensitive IPs and keys.
+
+all:
+  vars:
+    # Default variables applied to all hosts
+    ansible_user: ansible_user
+    ansible_ssh_private_key_file: ~/.ssh/dummy-key.pem
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+
+  children:
+    # Example grouping by location or function
+    local_dev:
+      hosts:
+        # Define specific hosts under the group
+        localhost:
+          ansible_connection: local
+          ansible_host: 127.0.0.1
+        
+    example_group:
+      hosts:
+        webserver-01:
+          ansible_host: 192.168.1.100
+          ansible_port: 22
+          # Overriding the default key for this specific host
+          ansible_ssh_private_key_file: ~/.ssh/special-key.pem
