@@ -10,10 +10,10 @@ galaxy_info:
   min_ansible_version: "2.14"
   platforms:
     - name: Ubuntu
-      versions: [focal, jammy, noble]
+      versions: [focal, jammy, noble, resolute]
     - name: Debian
       versions: [bullseye, bookworm]
-    - name: Enterprise Linux
+    - name: EL
       versions: ['all']
   galaxy_tags:
     - patching
