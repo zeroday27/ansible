@@ -1,5 +1,0 @@
----
-- import_playbook: baseline.yml
-
-- import_playbook: patch.yml
-  tags: [patching]
